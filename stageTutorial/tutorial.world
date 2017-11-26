@@ -46,9 +46,9 @@ turtlebot
 
 #adding blocks
 block( pose [ 2.000 4.000 0.000 0.000 ] color "green")
-block( pose [ 4.000 4.000 0.000 0.000 ] color "red")
-block( pose [ 1.000 8.000 0.000 0.000 ] color "blue")
-block( pose [ 8.000 8.000 0.000 0.000 ] color "yellow")
-block( pose [ 8.000 1.000 0.000 0.000 ] color "purple")
+block( pose [ 4.500 4.500 0.000 0.000 ] color "red")
+block( pose [ 1.500 7.500 0.000 0.000 ] color "blue")
+block( pose [ 7.500 7.500 0.000 0.000 ] color "yellow")
+block( pose [ 8.500 1.000 0.000 0.000 ] color "purple")
 
 

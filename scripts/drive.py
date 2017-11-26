@@ -1,13 +1,12 @@
 #!/usr/bin/env python
+import numpy as np
+import math
 
 # Adds the necessary core ROS libraries for Python
 import rospy
 import cv2
-from cv_bridge import CvBridge, CvBridgeError
-import numpy as np
-import math
-cvbridge = CvBridge()
 from opencv_apps.msg import CircleArrayStamped, Circle, Point2D
+from cv_bridge import CvBridge, CvBridgeError
 
 import tf2_ros
 from tf2_geometry_msgs import PointStamped
@@ -22,6 +21,8 @@ from sensor_msgs.msg import LaserScan
 from sensor_msgs.msg import Image, LaserScan
 
 from visualization_msgs.msg import Marker
+
+cvbridge = CvBridge()
 
 global rangerobot
 rangerobot = 10
@@ -123,21 +124,31 @@ def markerDetected(stamped_point):
 
     global marker_list
     if marker_list is None:
-        marker_list = [(marker_x, marker_y)]
+        marker_list = [(marker_x, marker_y, 1)]
     else:
         found_match = False
-        for i, (m_x, m_y) in enumerate(marker_list):
+        for i, (m_x, m_y, count) in enumerate(marker_list):
             dist = math.sqrt((marker_x-m_x) ** 2 + (marker_y-m_y) ** 2)
             if dist < 1.0:
                 found_match = True
-                marker_list[i] = ((m_x+marker_x)/2, (m_y+marker_y)/2)
+                marker_list[i] = ((m_x+marker_x)/2, (m_y+marker_y)/2, count+1)
                 break
         if not found_match:
-            marker_list.append((marker_x, marker_y))
+            marker_list.append((marker_x, marker_y, 1))
+        for i, (m1_x, m1_y, count1) in enumerate(marker_list):
+            for j, (m2_x, m2_y, count2) in enumerate(marker_list):
+                if i == j:
+                    continue
+                else:
+                    dist = math.sqrt((m2_x-m1_x) ** 2 + (m2_y-m1_y) ** 2)
+                    if dist < 1.0:
+                        marker_list[i] = ((m1_x+m2_x)/2, (m1_y+m2_y)/2, count1+count2)
+                        del marker_list[j]
 
     print('markers: {}'.format(marker_list))
     for i, marker in enumerate(marker_list):
-        markerPub.publish(get_marker(marker[0], marker[1], i))
+        if marker[2] > 1:
+            markerPub.publish(get_marker(marker[0], marker[1], i))
 
 
 def circleProcessing(circleArray):
@@ -149,7 +160,6 @@ def circleProcessing(circleArray):
         count = 0
 
     for circle in circleArray.circles:
-        # print("Circle Center:({},{}), Radius:{}".format(circle.center.x, circle.center.y, circle.radius))
         x = (circle.center.x-size)/meters_to_pixels
         y = (circle.center.y-size)/meters_to_pixels
         marker_pos = PointStamped()
@@ -158,20 +168,13 @@ def circleProcessing(circleArray):
         marker_pos.point.x=x
         marker_pos.point.y=y
         marker_pos.point.z=0.0
-        # print("Adjusted Offset:({},{})".format(x, y))
         markerDetected(marker_pos)
 
 if __name__ == '__main__':
-    print('spot 1')
     global vel_data
     vel_data=None
 
-    rospy.init_node('move')
-    global tfBuffer
-    tfBuffer = tf2_ros.Buffer()
-    global listener
-    listener = tf2_ros.TransformListener(tfBuffer)
-
+    rospy.init_node('controller')
     # Publish rviz Markers
     global markerPub
     markerPub = rospy.Publisher('visualization_marker', Marker, queue_size=10)
